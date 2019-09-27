@@ -1,1 +1,183 @@
 == swagsock-js
+
+This javascript library is a client library to interact with REST services that are enabled for Swaggersocket[1]. Swaggersocket is a binding of REST on Websocket.
+
+=== Install
+swagsock.js can be directly downloaded from this repository or installed using npm.
+
+==== manually
+https://raw.githubusercontent.com/elakito/swagsock-js/master/lib/swagsock.js[swagsock.js]
+
+==== npm
+----
+npm install swagsock.js
+----
+
+=== Usage
+
+==== Create a client
+First, the client instance must be instantiated for some target endpoint.
+
+.Swaggersocket driver
+|===
+| method | description | usage samples
+| `swaggersocket`
+| creates a new client for the specified endpoint. Optional `trackingid` identifies the client. If omitted, one is created.
+| `swaggersocket(hosturl, trackingid?)`
+|===
+
+----
+// set hosturl to the service endpoint
+var hosturl = "http://localhost:8091/samples/greeter";
+
+// load swagger.js and bind it to swagsock
+const swagsock = require('swagsock.js');
+
+// create the client for the target host
+swagSocket = swagsock.swaggersocket(hosturl, trackingid);
+
+----
+
+
+==== Open the connection
+Once the client is instantiated, the client can open a connection. The client has the on handler to bind some callback functions.
+
+
+.Swaggersocket client
+|===
+| method | description | usage samples
+| `on`
+| binds the specified callback to the operation
+| `on("open", function() {...})`
+
+| `open`
+| opens a new connection
+| `open()`
+
+| `close`
+| closes the connection
+| `close()`
+
+| `send`
+| sends the specified request and expects to receive a response at the callback
+| `send(req, function(header, content) {...})`
+|===
+
+----
+// bind optional callback functions
+swagSocket.on("open", function() {
+  console.log('Connected using websocket');
+  ...
+});
+swagSocket.on("close", function() {
+  console.log('Connection closed. Reconnecting ...');
+  ...
+});
+
+// open a connection
+swagSocket.open();
+----
+
+==== Create a request and send
+A new request is created by calling the client's `request()` method and built using the following methods that can be cascaded.
+
+.Request building methods
+|===
+| method | description | usage example
+| `method`
+| sets the request method.
+| `method("PUT")`
+
+| `pathpattern`
+| sets the path pattern
+| `pathpattern("/v1/service/order/{id}")`
+
+| `pathparam`
+| sets the specifierd path parameter
+| `pathparam("id", "12345")`
+
+| `queryparam`
+| sets the specified query parameter
+| `queryparam("year", "2019")
+
+| `headerparam`
+| sets the specified header parameter
+| `headerparam("x-token-id", "b0cbb3b4aaeea63a49ae0d5a31af9c93")`
+
+| `content`
+| sets the content with the specified content type
+| `content("{'fruit': 'peach'}", "application/json")`
+
+| `subscribe`
+| creates a subscription to receive a series of responses
+| `subscribe()`
+
+| `unsubscribe`
+| cancels the subscription identified by the specified request ID
+| `unsubscribe("23")`
+
+|===
+
+----
+// create POST request to /v1/echo with content "hi"
+var req = swagSocket.request().pathpattern("/v1/echo").method("POST").content("hi", "text/plain");
+
+// send the request and print out the response
+swagSock.send(req, function(header, content) {
+  console.log("res"+header.id+":", JSON.stringify(header) + content);
+});
+
+// after the send call, the request ID is set to the request and this value can be retrieved.
+console("request-id:"+req.getrequestid());
+----
+
+==== Create a subscription and receive a series of responses
+
+Any operation can be used to initiate a subscription. The server side handler for the operation is responsible for the subscription at the server side. For the client side, the request must be built with `subscribe()`.
+----
+// create GET request to /v1/subscribe
+var req = swagSocket.request().pathpattern("/v1/subscribe").method("GET").subscribe();
+
+// send the request and print out the response which may be continuously received
+swagSock.send(req, function(header, content) {
+  console.log("res"+header.id+":", JSON.stringify(header) + content);
+});
+
+// keep the subscription ID which is the request ID of the request
+var subid = req.getrequestid();
+----
+
+What is subscribed and which responses are received by the callback function of the subscribe request depends on the implementation of the operation. The subscription can be canceled with a unsubscribe request.
+
+----
+// cancel the subscription
+var req = swagSocket.request().pathpattern("/v1/unsubscribe").method("DELETE").unsubscribe(subid);
+
+// send the request and print out the response
+swagSock.send(req, function(header, content) {
+  console.log("res"+header.id+":", JSON.stringify(header) + content);
+});
+----
+
+
+=== Samples
+
+ * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/swagsock-client[examples/node-greeter-clients/swagsock-client]
+  - A node.js client using swagsock.js to call the greeter service.
+
+* https://github.com/elakito/swagsock/tree/master/examples/chat[examples/chat]
+  - This is a chat service using swagsock.js. This example includes a browser client.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/chat-multirooms[examples/chat-multirooms]
+  - This is a multi-rooms chat service using swagsock.js. This example includes a browser client.
+
+ 
+The go libraries for the server side and client side are available [2] and these can be used with the code generated by go-swagger[3].
+
+=== References
+
+- [1] https://github.com/swagger-api/swagger-socket[]
+
+- [2] https://github.com/elakito/swagsock[]
+
+- [3] https://github.com/go-swagger/go-swagger[]
